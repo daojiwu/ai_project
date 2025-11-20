@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.mapper.VehicleTestMapper">
+    
+    <resultMap id="VehicleTestMap" type="com.example.entity.VehicleTest">
+        <id property="id" column="id"/>
+        <result property="fy" column="fy"/>
+        <result property="clmc" column="clmc"/>
+        <result property="cph" column="cph"/>
+    </resultMap>
+    
+    <!-- 分页查询 -->
+    <select id="selectByCondition" resultMap="VehicleTestMap">
+        SELECT id, fy, clmc, cph 
+        FROM uf_csclxxb
+        <where>
+            <if test="clmc != null and clmc != ''">
+                AND clmc LIKE CONCAT('%', #{clmc}, '%')
+            </if>
+            <if test="cph != null and cph != ''">
+                AND cph LIKE CONCAT('%', #{cph}, '%')
+            </if>
+        </where>
+        ORDER BY id
+        OFFSET #{offset} ROWS
+        FETCH NEXT #{limit} ROWS ONLY
+    </select>
+    
+    <!-- 查询总数 -->
+    <select id="countByCondition" resultType="int">
+        SELECT COUNT(*) 
+        FROM uf_csclxxb
+        <where>
+            <if test="clmc != null and clmc != ''">
+                AND clmc LIKE CONCAT('%', #{clmc}, '%')
+            </if>
+            <if test="cph != null and cph != ''">
+                AND cph LIKE CONCAT('%', #{cph}, '%')
+            </if>
+        </where>
+    </select>
+    
+    <!-- 批量插入 -->
+    <insert id="insertBatch">
+        INSERT INTO uf_csclxxb (fy, clmc, cph) VALUES
+        <foreach collection="vehicles" item="vehicle" separator=",">
+            (#{vehicle.fy}, #{vehicle.clmc}, #{vehicle.cph})
+        </foreach>
+    </insert>
+    
+    <!-- 批量更新 -->
+    <update id="updateBatch">
+        <foreach collection="vehicles" item="vehicle" separator=";">
+            UPDATE uf_csclxxb 
+            SET fy = #{vehicle.fy}, clmc = #{vehicle.clmc}, cph = #{vehicle.cph}
+            WHERE id = #{vehicle.id}
+        </foreach>
+    </update>
+    
+    <!-- 批量删除 -->
+    <delete id="deleteBatch">
+        DELETE FROM uf_csclxxb WHERE id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+    
+    <!-- 单个操作 -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO uf_csclxxb (fy, clmc, cph) 
+        VALUES (#{fy}, #{clmc}, #{cph})
+    </insert>
+    
+    <update id="update">
+        UPDATE uf_csclxxb 
+        SET fy = #{fy}, clmc = #{clmc}, cph = #{cph}
+        WHERE id = #{id}
+    </update>
+    
+    <delete id="deleteById">
+        DELETE FROM uf_csclxxb WHERE id = #{id}
+    </delete>
+    
+    <select id="selectById" resultMap="VehicleTestMap">
+        SELECT id, fy, clmc, cph FROM uf_csclxxb WHERE id = #{id}
+    </select>
+</mapper>

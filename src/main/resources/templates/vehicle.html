@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>车辆管理系统</title>
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <style>
+        .container {
+            margin-top: 20px;
+        }
+        .form-inline {
+            display: flex;
+            gap: 10px;
+            align-items: end;
+            margin-bottom: 20px;
+        }
+        .action-buttons {
+            margin-bottom: 20px;
+        }
+        .table th, .table td {
+            vertical-align: middle;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>车辆管理系统</h2>
+    
+    <!-- 搜索表单 -->
+    <div class="form-inline">
+        <div class="mb-1">
+            <label for="searchClmc" class="form-label">车辆名称:</label>
+            <input type="text" class="form-control" id="searchClmc">
+        </div>
+        <div class="mb-1">
+            <label for="searchCph" class="form-label">车牌号:</label>
+            <input type="text" class="form-control" id="searchCph">
+        </div>
+        <button type="button" class="btn btn-primary" onclick="search()">查询</button>
+        <button type="button" class="btn btn-secondary" onclick="resetSearch()">重置</button>
+    </div>
+    
+    <!-- 操作按钮 -->
+    <div class="action-buttons">
+        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addModal">新增</button>
+        <button type="button" class="btn btn-warning" onclick="showBatchUpdate()">批量修改</button>
+        <button type="button" class="btn btn-danger" onclick="batchDelete()">批量删除</button>
+        <button type="button" class="btn btn-info" onclick="exportData()">导出</button>
+        <button type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#importModal">导入</button>
+        <button type="button" class="btn btn-primary" onclick="testData()">测试数据</button>
+    </div>
+    
+    <!-- 数据表格 -->
+    <table class="table table-bordered table-striped">
+        <thead>
+        <tr>
+            <th><input type="checkbox" id="checkAll"></th>
+            <th>ID</th>
+            <th>费用</th>
+            <th>车辆名称</th>
+            <th>车牌号</th>
+            <th>操作</th>
+        </tr>
+        </thead>
+        <tbody id="vehicleTableBody">
+        <!-- 数据行将通过JavaScript动态填充 -->
+        </tbody>
+    </table>
+    
+    <!-- 分页 -->
+    <nav aria-label="Page navigation">
+        <ul class="pagination" id="pagination">
+            <!-- 分页内容将通过JavaScript动态填充 -->
+        </ul>
+    </nav>
+</div>
+
+<!-- 新增模态框 -->
+<div class="modal fade" id="addModal" tabindex="-1" aria-labelledby="addModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addModalLabel">新增车辆</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addForm">
+                    <div class="mb-3">
+                        <label for="addFy" class="form-label">费用:</label>
+                        <input type="number" class="form-control" id="addFy" step="0.01">
+                    </div>
+                    <div class="mb-3">
+                        <label for="addClmc" class="form-label">车辆名称:</label>
+                        <input type="text" class="form-control" id="addClmc">
+                    </div>
+                    <div class="mb-3">
+                        <label for="addCph" class="form-label">车牌号:</label>
+                        <input type="text" class="form-control" id="addCph">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="addVehicle()">添加</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 修改模态框 -->
+<div class="modal fade" id="updateModal" tabindex="-1" aria-labelledby="updateModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="updateModalLabel">修改车辆</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="updateForm">
+                    <input type="hidden" id="updateId">
+                    <div class="mb-3">
+                        <label for="updateFy" class="form-label">费用:</label>
+                        <input type="number" class="form-control" id="updateFy" step="0.01">
+                    </div>
+                    <div class="mb-3">
+                        <label for="updateClmc" class="form-label">车辆名称:</label>
+                        <input type="text" class="form-control" id="updateClmc">
+                    </div>
+                    <div class="mb-3">
+                        <label for="updateCph" class="form-label">车牌号:</label>
+                        <input type="text" class="form-control" id="updateCph">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="updateVehicle()">修改</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 导入模态框 -->
+<div class="modal fade" id="importModal" tabindex="-1" aria-labelledby="importModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="importModalLabel">导入数据</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="importData" class="form-label">JSON数据:</label>
+                    <textarea class="form-control" id="importData" rows="10" placeholder='[{"fy":100.0,"clmc":"测试车辆","cph":"粤A12345"}]'></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="importData()">导入</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentPage = 1;
+    const pageSize = 10;
+    // 显式指定基础路径和端口为8080
+    const basePath = window.location.protocol + "//" + window.location.hostname + ":8080";
+
+    $(document).ready(function () {
+        loadData(currentPage);
+
+        // 全选/取消全选
+        $('#checkAll').click(function () {
+            $('input[name="vehicleCheckbox"]').prop('checked', $(this).prop('checked'));
+        });
+    });
+
+    // 加载数据
+    function loadData(page) {
+        const clmc = $('#searchClmc').val();
+        const cph = $('#searchCph').val();
+
+        $.ajax({
+            url: basePath + '/vehicle/page',
+            type: 'GET',
+            xhrFields: {
+                withCredentials: false
+            },
+            data: {
+                clmc: clmc,
+                cph: cph,
+                page: page,
+                size: pageSize
+            },
+            success: function (result) {
+                console.log('接收到的数据:', result);
+                // 检查返回的数据结构
+                if (result && result.data) {
+                    renderTable(result.data);
+                    renderPagination(result.total, result.page, result.totalPages);
+                    currentPage = page;
+                } else if (result && result.rows) {
+                    // 兼容另一种可能的数据结构
+                    renderTable(result.rows);
+                    renderPagination(result.total, result.page, result.totalPages);
+                    currentPage = page;
+                } else {
+                    console.error('数据格式不正确:', result);
+                    alert('数据格式不正确，请查看控制台了解详情');
+                }
+            },
+            error: function (xhr, status, error) {
+                console.error('加载数据失败:', xhr, status, error);
+                alert('加载数据失败: ' + error);
+            }
+        });
+    }
+
+    // 渲染表格
+    function renderTable(data) {
+        const tbody = $('#vehicleTableBody');
+        tbody.empty();
+
+        if (!data || data.length === 0) {
+            tbody.append('<tr><td colspan="6" class="text-center">暂无数据</td></tr>');
+            return;
+        }
+
+        data.forEach(item => {
+            // 处理可能的字段名称差异
+            const id = item.id || item.ID || '';
+            const fy = item.fy || item.FY || '';
+            const clmc = item.clmc || item.CLMC || '';
+            const cph = item.cph || item.CPH || '';
+            
+            const row = `
+                <tr>
+                    <td><input type="checkbox" name="vehicleCheckbox" value="${id}"></td>
+                    <td>${id}</td>
+                    <td>${fy}</td>
+                    <td>${clmc}</td>
+                    <td>${cph}</td>
+                    <td>
+                        <button class="btn btn-sm btn-warning" onclick="showUpdate(${id})">修改</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteVehicle(${id})">删除</button>
+                    </td>
+                </tr>
+            `;
+            tbody.append(row);
+        });
+    }
+
+    // 渲染分页
+    function renderPagination(total, currentPage, totalPages) {
+        const pagination = $('#pagination');
+        pagination.empty();
+
+        // 处理可能的属性名称差异
+        const totalCount = total || 0;
+        const current = currentPage || 1;
+        const totalPage = totalPages || 1;
+        
+        if (totalPage <= 1) {
+            return;
+        }
+
+        // 上一页
+        if (current > 1) {
+            pagination.append(`<li class="page-item"><a class="page-link" href="javascript:loadData(${current - 1})">上一页</a></li>`);
+        } else {
+            pagination.append('<li class="page-item disabled"><span class="page-link">上一页</span></li>');
+        }
+
+        // 页码
+        for (let i = 1; i <= totalPage; i++) {
+            if (i === current) {
+                pagination.append(`<li class="page-item active"><span class="page-link">${i}</span></li>`);
+            } else {
+                pagination.append(`<li class="page-item"><a class="page-link" href="javascript:loadData(${i})">${i}</a></li>`);
+            }
+        }
+
+        // 下一页
+        if (current < totalPage) {
+            pagination.append(`<li class="page-item"><a class="page-link" href="javascript:loadData(${current + 1})">下一页</a></li>`);
+        } else {
+            pagination.append('<li class="page-item disabled"><span class="page-link">下一页</span></li>');
+        }
+    }
+
+    // 搜索
+    function search() {
+        loadData(1);
+    }
+
+    // 重置搜索
+    function resetSearch() {
+        $('#searchClmc').val('');
+        $('#searchCph').val('');
+        loadData(1);
+    }
+
+    // 显示新增模态框
+    function showAdd() {
+        $('#addForm')[0].reset();
+        $('#addModal').modal('show');
+    }
+
+    // 添加车辆
+    function addVehicle() {
+        const vehicle = {
+            fy: parseFloat($('#addFy').val()) || 0,
+            clmc: $('#addClmc').val(),
+            cph: $('#addCph').val()
+        };
+
+        $.ajax({
+            url: basePath + '/vehicle/add',
+            type: 'POST',
+            contentType: 'application/json',
+            xhrFields: {
+                withCredentials: false
+            },
+            data: JSON.stringify(vehicle),
+            success: function (result) {
+                if (result.success) {
+                    alert('添加成功');
+                    $('#addModal').modal('hide');
+                    loadData(currentPage);
+                } else {
+                    alert('添加失败: ' + result.message);
+                }
+            },
+            error: function () {
+                alert('添加失败');
+            }
+        });
+    }
+
+    // 显示修改模态框
+    function showUpdate(id) {
+        $.ajax({
+            url: basePath + '/vehicle/page',
+            type: 'GET',
+            xhrFields: {
+                withCredentials: false
+            },
+            data: {
+                page: 1,
+                size: 1000
+            },
+            success: function (result) {
+                const vehicle = result.data.find(item => item.id == id);
+                if (vehicle) {
+                    $('#updateId').val(vehicle.id);
+                    $('#updateFy').val(vehicle.fy);
+                    $('#updateClmc').val(vehicle.clmc);
+                    $('#updateCph').val(vehicle.cph);
+                    $('#updateModal').modal('show');
+                }
+            },
+            error: function () {
+                alert('获取数据失败');
+            }
+        });
+    }
+
+    // 修改车辆
+    function updateVehicle() {
+        const vehicle = {
+            id: parseInt($('#updateId').val()),
+            fy: parseFloat($('#updateFy').val()) || 0,
+            clmc: $('#updateClmc').val(),
+            cph: $('#updateCph').val()
+        };
+
+        $.ajax({
+            url: basePath + '/vehicle/update',
+            type: 'POST',
+            contentType: 'application/json',
+            xhrFields: {
+                withCredentials: false
+            },
+            data: JSON.stringify(vehicle),
+            success: function (result) {
+                if (result.success) {
+                    alert('修改成功');
+                    $('#updateModal').modal('hide');
+                    loadData(currentPage);
+                } else {
+                    alert('修改失败: ' + result.message);
+                }
+            },
+            error: function () {
+                alert('修改失败');
+            }
+        });
+    }
+
+    // 删除车辆
+    function deleteVehicle(id) {
+        if (!confirm('确定要删除这条记录吗？')) {
+            return;
+        }
+
+        $.ajax({
+            url: basePath + '/vehicle/delete/' + id,
+            type: 'POST',
+            contentType: 'application/json',
+            xhrFields: {
+                withCredentials: false
+            },
+            success: function (result) {
+                if (result.success) {
+                    alert('删除成功');
+                    loadData(currentPage);
+                } else {
+                    alert('删除失败: ' + result.message);
+                }
+            },
+            error: function () {
+                alert('删除失败');
+            }
+        });
+    }
+
+    // 显示批量修改
+    function showBatchUpdate() {
+        const selectedIds = getSelectedIds();
+        if (selectedIds.length === 0) {
+            alert('请至少选择一条记录');
+            return;
+        }
+        alert('批量修改功能需要根据具体业务需求实现');
+    }
+
+    // 批量删除
+    function batchDelete() {
+        const selectedIds = getSelectedIds();
+        if (selectedIds.length === 0) {
+            alert('请至少选择一条记录');
+            return;
+        }
+
+        if (!confirm('确定要删除选中的记录吗？')) {
+            return;
+        }
+
+        $.ajax({
+            url: basePath + '/vehicle/batchDelete',
+            type: 'POST',
+            contentType: 'application/json',
+            xhrFields: {
+                withCredentials: false
+            },
+            data: JSON.stringify(selectedIds),
+            success: function (result) {
+                if (result.success) {
+                    alert('批量删除成功');
+                    loadData(currentPage);
+                } else {
+                    alert('批量删除失败: ' + result.message);
+                }
+            },
+            error: function () {
+                alert('批量删除失败');
+            }
+        });
+    }
+
+    // 获取选中的ID列表
+    function getSelectedIds() {
+        const selectedIds = [];
+        $('input[name="vehicleCheckbox"]:checked').each(function () {
+            selectedIds.push(parseInt($(this).val()));
+        });
+        return selectedIds;
+    }
+
+    // 导出数据
+    function exportData() {
+        window.location.href = basePath + '/vehicle/export';
+    }
+
+    // 测试数据
+    function testData() {
+        $.ajax({
+            url: basePath + '/vehicle/testData',
+            type: 'GET',
+            xhrFields: {
+                withCredentials: false
+            },
+            success: function (result) {
+                console.log('测试数据:', result);
+                alert('测试数据已获取，请查看控制台');
+            },
+            error: function (xhr, status, error) {
+                console.error('测试失败:', xhr, status, error);
+                alert('测试失败: ' + error);
+            }
+        });
+    }
+
+    // 导入数据
+    function importData() {
+        const jsonData = $('#importData').val();
+        if (!jsonData) {
+            alert('请输入JSON数据');
+            return;
+        }
+
+        $.ajax({
+            url: basePath + '/vehicle/import',
+            type: 'POST',
+            contentType: 'application/json',
+            xhrFields: {
+                withCredentials: false
+            },
+            data: jsonData,
+            success: function (result) {
+                if (result.success) {
+                    alert('导入成功');
+                    $('#importModal').modal('hide');
+                    loadData(currentPage);
+                } else {
+                    alert('导入失败: ' + result.message);
+                }
+            },
+            error: function () {
+                alert('导入失败');
+            }
+        });
+    }
+</script>
+</body>
+</html>
