@@ -1,5 +1,5 @@
 package com.example.entity;
-
+//测试测试车辆
 public class VehicleTest {
     private Integer id;
     private Double fy;
