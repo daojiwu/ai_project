@@ -7,6 +7,7 @@ import com.example.entity.VehicleTest;
 import com.example.service.PageResult;
 import com.example.service.VehicleTestService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.ModelAndView;
@@ -16,6 +17,8 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 
 @Controller
 @RequestMapping("/vehicle")
@@ -23,6 +26,9 @@ public class VehicleTestController {
 
     @Autowired
     private VehicleTestService vehicleTestService;
+    
+    @Autowired
+    private Executor taskExecutor;
 
     /**
      * 跳转到车辆管理页面
@@ -31,17 +37,10 @@ public class VehicleTestController {
     public String list() {
         return "vehicle";
     }
-    
-    /**
-     * 根路径重定向到车辆管理页面
-     */
-    @GetMapping("/")
-    public String index() {
-        return "redirect:/vehicle/list";
-    }
+
 
     /**
-     * 分页查询接口
+     * 分页查询接口（同步）
      */
     @ResponseBody
     @GetMapping("/page")
@@ -67,6 +66,35 @@ public class VehicleTestController {
     }
 
     /**
+     * 分页查询接口（异步）
+     */
+    @ResponseBody
+    @GetMapping("/pageAsync")
+    public CompletableFuture<Object> pageAsync(
+            @RequestParam(defaultValue = "") String clmc,
+            @RequestParam(defaultValue = "") String cph,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        // 使用自定义线程池执行异步任务
+        return CompletableFuture.supplyAsync(() -> {
+            PageResult<VehicleTest> result = vehicleTestService.selectByCondition(clmc, cph, page, size);
+            
+            // 创建一个兼容的对象结构
+            JSONObject response = new JSONObject();
+            response.put("data", result.getData());
+            response.put("total", result.getTotal());
+            response.put("page", result.getPage());
+            response.put("size", result.getSize());
+            response.put("totalPages", result.getTotalPages());
+            response.put("rows", result.getData()); // 兼容某些前端框架
+            response.put("totalCount", result.getTotal()); // 兼容某些前端框架
+            response.put("currentPage", result.getPage()); // 兼容某些前端框架
+            
+            return response;
+        }, taskExecutor);
+    }
+
+    /**
      * 测试数据接口，用于验证后端是否能正确返回数据
      */
     @ResponseBody
@@ -80,17 +108,21 @@ public class VehicleTestController {
      */
     @ResponseBody
     @PostMapping("/add")
-    public JSONObject add(@RequestBody VehicleTest vehicle) {
-        JSONObject result = new JSONObject();
-        try {
-            boolean success = vehicleTestService.insert(vehicle);
-            result.put("success", success);
-            result.put("message", success ? "添加成功" : "添加失败");
-        } catch (Exception e) {
-            result.put("success", false);
-            result.put("message", "添加失败：" + e.getMessage());
-        }
-        return result;
+    public CompletableFuture<JSONObject> add(@RequestBody VehicleTest vehicle) {
+        CompletableFuture<JSONObject> future = new CompletableFuture<>();
+        vehicleTestService.insertAsync(vehicle).thenAccept(success -> {
+            JSONObject result = new JSONObject();
+            try {
+                result.put("success", success);
+                result.put("message", success ? "添加成功" : "添加失败");
+                future.complete(result);
+            } catch (Exception e) {
+                result.put("success", false);
+                result.put("message", "添加失败：" + e.getMessage());
+                future.complete(result);
+            }
+        });
+        return future;
     }
 
     /**
@@ -98,17 +130,21 @@ public class VehicleTestController {
      */
     @ResponseBody
     @PostMapping("/update")
-    public JSONObject update(@RequestBody VehicleTest vehicle) {
-        JSONObject result = new JSONObject();
-        try {
-            boolean success = vehicleTestService.update(vehicle);
-            result.put("success", success);
-            result.put("message", success ? "修改成功" : "修改失败");
-        } catch (Exception e) {
-            result.put("success", false);
-            result.put("message", "修改失败：" + e.getMessage());
-        }
-        return result;
+    public CompletableFuture<JSONObject> update(@RequestBody VehicleTest vehicle) {
+        CompletableFuture<JSONObject> future = new CompletableFuture<>();
+        vehicleTestService.updateAsync(vehicle).thenAccept(success -> {
+            JSONObject result = new JSONObject();
+            try {
+                result.put("success", success);
+                result.put("message", success ? "修改成功" : "修改失败");
+                future.complete(result);
+            } catch (Exception e) {
+                result.put("success", false);
+                result.put("message", "修改失败：" + e.getMessage());
+                future.complete(result);
+            }
+        });
+        return future;
     }
 
     /**
@@ -116,17 +152,21 @@ public class VehicleTestController {
      */
     @ResponseBody
     @PostMapping("/delete/{id}")
-    public JSONObject delete(@PathVariable Integer id) {
-        JSONObject result = new JSONObject();
-        try {
-            boolean success = vehicleTestService.deleteById(id);
-            result.put("success", success);
-            result.put("message", success ? "删除成功" : "删除失败");
-        } catch (Exception e) {
-            result.put("success", false);
-            result.put("message", "删除失败：" + e.getMessage());
-        }
-        return result;
+    public CompletableFuture<JSONObject> delete(@PathVariable Integer id) {
+        CompletableFuture<JSONObject> future = new CompletableFuture<>();
+        vehicleTestService.deleteByIdAsync(id).thenAccept(success -> {
+            JSONObject result = new JSONObject();
+            try {
+                result.put("success", success);
+                result.put("message", success ? "删除成功" : "删除失败");
+                future.complete(result);
+            } catch (Exception e) {
+                result.put("success", false);
+                result.put("message", "删除失败：" + e.getMessage());
+                future.complete(result);
+            }
+        });
+        return future;
     }
 
     /**
@@ -134,17 +174,21 @@ public class VehicleTestController {
      */
     @ResponseBody
     @PostMapping("/batchAdd")
-    public JSONObject batchAdd(@RequestBody List<VehicleTest> vehicles) {
-        JSONObject result = new JSONObject();
-        try {
-            boolean success = vehicleTestService.insertBatch(vehicles);
-            result.put("success", success);
-            result.put("message", success ? "批量添加成功" : "批量添加失败");
-        } catch (Exception e) {
-            result.put("success", false);
-            result.put("message", "批量添加失败：" + e.getMessage());
-        }
-        return result;
+    public CompletableFuture<JSONObject> batchAdd(@RequestBody List<VehicleTest> vehicles) {
+        CompletableFuture<JSONObject> future = new CompletableFuture<>();
+        vehicleTestService.insertBatchAsync(vehicles).thenAccept(success -> {
+            JSONObject result = new JSONObject();
+            try {
+                result.put("success", success);
+                result.put("message", success ? "批量添加成功" : "批量添加失败");
+                future.complete(result);
+            } catch (Exception e) {
+                result.put("success", false);
+                result.put("message", "批量添加失败：" + e.getMessage());
+                future.complete(result);
+            }
+        });
+        return future;
     }
 
     /**
@@ -152,17 +196,21 @@ public class VehicleTestController {
      */
     @ResponseBody
     @PostMapping("/batchUpdate")
-    public JSONObject batchUpdate(@RequestBody List<VehicleTest> vehicles) {
-        JSONObject result = new JSONObject();
-        try {
-            boolean success = vehicleTestService.updateBatch(vehicles);
-            result.put("success", success);
-            result.put("message", success ? "批量修改成功" : "批量修改失败");
-        } catch (Exception e) {
-            result.put("success", false);
-            result.put("message", "批量修改失败：" + e.getMessage());
-        }
-        return result;
+    public CompletableFuture<JSONObject> batchUpdate(@RequestBody List<VehicleTest> vehicles) {
+        CompletableFuture<JSONObject> future = new CompletableFuture<>();
+        vehicleTestService.updateBatchAsync(vehicles).thenAccept(success -> {
+            JSONObject result = new JSONObject();
+            try {
+                result.put("success", success);
+                result.put("message", success ? "批量修改成功" : "批量修改失败");
+                future.complete(result);
+            } catch (Exception e) {
+                result.put("success", false);
+                result.put("message", "批量修改失败：" + e.getMessage());
+                future.complete(result);
+            }
+        });
+        return future;
     }
 
     /**
@@ -170,17 +218,21 @@ public class VehicleTestController {
      */
     @ResponseBody
     @PostMapping("/batchDelete")
-    public JSONObject batchDelete(@RequestBody List<Integer> ids) {
-        JSONObject result = new JSONObject();
-        try {
-            boolean success = vehicleTestService.deleteBatch(ids);
-            result.put("success", success);
-            result.put("message", success ? "批量删除成功" : "批量删除失败");
-        } catch (Exception e) {
-            result.put("success", false);
-            result.put("message", "批量删除失败：" + e.getMessage());
-        }
-        return result;
+    public CompletableFuture<JSONObject> batchDelete(@RequestBody List<Integer> ids) {
+        CompletableFuture<JSONObject> future = new CompletableFuture<>();
+        vehicleTestService.deleteBatchAsync(ids).thenAccept(success -> {
+            JSONObject result = new JSONObject();
+            try {
+                result.put("success", success);
+                result.put("message", success ? "批量删除成功" : "批量删除失败");
+                future.complete(result);
+            } catch (Exception e) {
+                result.put("success", false);
+                result.put("message", "批量删除失败：" + e.getMessage());
+                future.complete(result);
+            }
+        });
+        return future;
     }
 
     /**
@@ -208,28 +260,33 @@ public class VehicleTestController {
      */
     @ResponseBody
     @PostMapping("/import")
-    public JSONObject importData(@RequestBody String jsonData) {
-        JSONObject result = new JSONObject();
-        try {
-            JSONArray array = JSON.parseArray(jsonData);
-            List<VehicleTest> vehicles = new ArrayList<>();
+    public CompletableFuture<JSONObject> importData(@RequestBody String jsonData) {
+        CompletableFuture<JSONObject> future = new CompletableFuture<>();
+        CompletableFuture.runAsync(() -> {
+            JSONObject result = new JSONObject();
+            try {
+                JSONArray array = JSON.parseArray(jsonData);
+                List<VehicleTest> vehicles = new ArrayList<>();
 
-            for (int i = 0; i < array.size(); i++) {
-                JSONObject obj = array.getJSONObject(i);
-                VehicleTest vehicle = new VehicleTest();
-                vehicle.setFy(obj.getDouble("fy"));
-                vehicle.setClmc(obj.getString("clmc"));
-                vehicle.setCph(obj.getString("cph"));
-                vehicles.add(vehicle);
+                for (int i = 0; i < array.size(); i++) {
+                    JSONObject obj = array.getJSONObject(i);
+                    VehicleTest vehicle = new VehicleTest();
+                    vehicle.setFy(obj.getDouble("fy"));
+                    vehicle.setClmc(obj.getString("clmc"));
+                    vehicle.setCph(obj.getString("cph"));
+                    vehicles.add(vehicle);
+                }
+
+                boolean success = vehicleTestService.insertBatch(vehicles);
+                result.put("success", success);
+                result.put("message", success ? "导入成功" : "导入失败");
+                future.complete(result);
+            } catch (Exception e) {
+                result.put("success", false);
+                result.put("message", "导入失败：" + e.getMessage());
+                future.complete(result);
             }
-
-            boolean success = vehicleTestService.insertBatch(vehicles);
-            result.put("success", success);
-            result.put("message", success ? "导入成功" : "导入失败");
-        } catch (Exception e) {
-            result.put("success", false);
-            result.put("message", "导入失败：" + e.getMessage());
-        }
-        return result;
+        });
+        return future;
     }
 }

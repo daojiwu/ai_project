@@ -5,9 +5,11 @@ import com.example.mapper.VehicleTestMapper;
 import com.example.service.PageResult;
 import com.example.service.VehicleTestService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 @Service
 public class VehicleTestServiceImpl implements VehicleTestService {
@@ -23,6 +25,79 @@ public class VehicleTestServiceImpl implements VehicleTestService {
         return new PageResult<>(data, total, page, size);
     }
 
+    @Override
+    @Async("taskExecutor")
+    public CompletableFuture<Boolean> insertBatchAsync(List<VehicleTest> vehicles) {
+        try {
+            boolean result = vehicleTestMapper.insertBatch(vehicles) > 0;
+            return CompletableFuture.completedFuture(result);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return CompletableFuture.completedFuture(false);
+        }
+    }
+
+    @Override
+    @Async("taskExecutor")
+    public CompletableFuture<Boolean> updateBatchAsync(List<VehicleTest> vehicles) {
+        try {
+            boolean result = vehicleTestMapper.updateBatch(vehicles) > 0;
+            return CompletableFuture.completedFuture(result);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return CompletableFuture.completedFuture(false);
+        }
+    }
+
+    @Override
+    @Async("taskExecutor")
+    public CompletableFuture<Boolean> deleteBatchAsync(List<Integer> ids) {
+        try {
+            boolean result = vehicleTestMapper.deleteBatch(ids) > 0;
+            return CompletableFuture.completedFuture(result);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return CompletableFuture.completedFuture(false);
+        }
+    }
+
+    @Override
+    @Async("taskExecutor")
+    public CompletableFuture<Boolean> insertAsync(VehicleTest vehicle) {
+        try {
+            boolean result = vehicleTestMapper.insert(vehicle) > 0;
+            return CompletableFuture.completedFuture(result);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return CompletableFuture.completedFuture(false);
+        }
+    }
+
+    @Override
+    @Async("taskExecutor")
+    public CompletableFuture<Boolean> updateAsync(VehicleTest vehicle) {
+        try {
+            boolean result = vehicleTestMapper.update(vehicle) > 0;
+            return CompletableFuture.completedFuture(result);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return CompletableFuture.completedFuture(false);
+        }
+    }
+
+    @Override
+    @Async("taskExecutor")
+    public CompletableFuture<Boolean> deleteByIdAsync(Integer id) {
+        try {
+            boolean result = vehicleTestMapper.deleteById(id) > 0;
+            return CompletableFuture.completedFuture(result);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return CompletableFuture.completedFuture(false);
+        }
+    }
+
+    // 保持原有的同步方法
     @Override
     public boolean insertBatch(List<VehicleTest> vehicles) {
         try {

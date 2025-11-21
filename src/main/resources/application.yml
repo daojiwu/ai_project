@@ -1,5 +1,11 @@
 server:
   port: 8080
+  tomcat:
+    threads:
+      max: 240              # 最大工作线程数 (12逻辑核心 * 20 = 240)
+      min-spare: 12         # 最小空闲线程数 (与逻辑核心数相当)
+    accept-count: 100       # 等待队列长度
+    max-connections: 8192   # 最大连接数
 
 spring:
   profiles:
@@ -23,4 +29,3 @@ mybatis:
   configuration:
     map-underscore-to-camel-case: true
     log-impl: org.apache.ibatis.logging.log4j2.Log4j2Impl
-
